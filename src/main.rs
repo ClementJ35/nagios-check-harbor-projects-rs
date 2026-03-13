@@ -1,7 +1,8 @@
 use std::{collections::HashMap, usize};
 use clap::Parser;
-use ureq::{self, Error};
+use ureq;
 use regex::Regex;
+use std::process::ExitCode;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -49,7 +50,7 @@ fn convert_scientific_notation_to_int(numeric_string: &String) -> u64 {
     return return_int;
 }
 
-fn main() -> Result<(), Error> {
+fn main() -> ExitCode {
     // Parser Args
     let args: Args = Args::parse();
     let url: String = args.url;
@@ -61,15 +62,18 @@ fn main() -> Result<(), Error> {
     let mut warning_list: Vec<String> = [].to_vec();
 
     // placeholder to send result
-    let mut resut_line: String = "".to_string();
+    let mut result_line: String = "".to_string();
     let mut project_line: String = "".to_string();
+    let mut exit_code: u8 = 0;
 
     
     // Definition of the http get
     let body = ureq::get(url)
-        .call()?
+        .call().unwrap()
         .body_mut()
-        .read_to_string()?;
+        .read_to_string().unwrap();
+
+    // if body
 
     // Regex to extract only project related lines then vectorize
     let re_projects = Regex::new(r".*project_name=.*\n").unwrap();
@@ -117,7 +121,7 @@ fn main() -> Result<(), Error> {
         let percentage_quota: u64 = used_quota * 100 / total_quota;
         
         // Create NRPE style string
-        project_line += &format!("{}={};{warning};{critical};0;100", &hash_project_name, &percentage_quota);
+        project_line += &format!(" {}={}%;{warning};{critical}", &hash_project_name, &percentage_quota);
 
         // Check if we need to alert as crit or warn
         if percentage_quota >= critical as u64 {
@@ -132,8 +136,30 @@ fn main() -> Result<(), Error> {
 
     }
 
+    // Constructs stdout for critical or warning
+    if critical_list.len() > 0 {
 
+        result_line.push_str("QUOTA CRITICAL: ");
+        result_line.push_str(&critical_list.join(","));
+        result_line.push_str(" |");
 
-    println!("{project_line}");
-    Ok(())
+        exit_code = 2;
+        
+    }   else if  warning_list.len() > 0 {
+        
+        result_line.push_str("QUOTA warning: ");
+        result_line.push_str(&warning_list.join(","));
+        result_line.push_str(" |");
+
+        exit_code = 1;
+
+    } else {
+        result_line.push_str("QUOTA OK: All quotas are OK |");
+    }
+
+    result_line.push_str(&project_line);
+
+    println!("{result_line}");
+    return ExitCode::from(exit_code);
+
 }
