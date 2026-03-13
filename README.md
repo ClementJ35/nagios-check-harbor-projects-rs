@@ -11,7 +11,7 @@ QUOTA OK: All quotas are OK | kubernetes-proxy=0%;80;90 quay-proxy=67%;80;90 ama
 
 ## Prerequisite
 
-See [cargo.toml] for building dependencies
+See [cargo.toml](Cargo.toml) for building dependencies
 
 ## Building
 
@@ -23,7 +23,7 @@ $ cargo build --release
 
 ### License
 
-See [LICENSE]
+See [LICENSE](LICENSE)
 
 ### Contributing
 
